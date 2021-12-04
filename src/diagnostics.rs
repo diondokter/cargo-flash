@@ -180,6 +180,14 @@ pub(crate) fn render_diagnostics(error: OperationError) {
                     "You can list all the available chips by passing the `--list-chips` argument.".into(),
                 ],
             ),
+            ProbeRsError::MissingPermissions(permission) => (
+                error.to_string(),
+                vec![
+                    format!("A potentially irreversable operation needs to be done that needs the {} permission.", permission),
+                    "Before you give this permission, make sure to read the documentation to see what the remmifications are.".into(),
+                    format!("You can pass --allow-{} to allow this operation to be executed.", permission.replace("_", "-")),
+                ],
+            ),
             _ => if !connect_under_reset {
                 (
                     error.to_string(),
