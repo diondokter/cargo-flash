@@ -14,7 +14,6 @@ use probe_rs_cli_util::logging::{ask_to_log_crash, capture_panic};
 
 use probe_rs_cli_util::{build_artifact, log, logging, logging::Metadata};
 
-const CARGO_NAME: &str = env!("CARGO_PKG_NAME");
 const CARGO_VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_VERSION: &str = git_version::git_version!(fallback = "crates.io");
 
@@ -33,7 +32,7 @@ fn main() {
     panic::set_hook(Box::new(move |info| {
         #[cfg(feature = "sentry")]
         if ask_to_log_crash() {
-            capture_panic(&METADATA.lock().unwrap(), &info)
+            capture_panic(&METADATA.lock().unwrap(), info)
         }
         #[cfg(not(feature = "sentry"))]
         log::info!("{:#?}", &METADATA.lock().unwrap());
@@ -46,7 +45,7 @@ fn main() {
             #[cfg(not(feature = "sentry"))]
             log::info!("{:#?}", &METADATA.lock().unwrap());
 
-            // Ensure stderr is flushed before calling proces::exit,
+            // Ensure stderr is flushed before calling process::exit,
             // otherwise the process might panic, because it tries
             // to access stderr during shutdown.
             //
@@ -75,23 +74,16 @@ fn main_try() -> Result<(), OperationError> {
     let matches = FlashOptions::into_app()
         .bin_name("cargo flash")
         .after_help(CargoOptions::help_message("cargo flash").as_str())
+        .version(CARGO_VERSION)
+        .long_version(&*format!("{}\ngit commit: {}", CARGO_VERSION, GIT_VERSION))
         .get_matches_from(&args);
     let opt = FlashOptions::from_arg_matches(&matches)?;
-
-    // If we get the version option, print the current version immediately and exit.
-    if opt.version {
-        println!(
-            "{} {}\ngit commit: {}",
-            CARGO_NAME, CARGO_VERSION, GIT_VERSION
-        );
-        return Ok(());
-    }
 
     // Initialize the logger with the loglevel given on the commandline.
     logging::init(opt.log);
 
     // Get the current working dir. Make sure we have a proper default if it cannot be determined.
-    let work_dir = PathBuf::from(opt.work_dir.clone().unwrap_or_else(|| PathBuf::from(".")));
+    let work_dir = opt.work_dir.clone().unwrap_or_else(|| PathBuf::from("."));
 
     // Load the target description, if given in the cli parameters.
     opt.probe_options.maybe_load_chip_desc()?;
